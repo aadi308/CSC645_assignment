@@ -23,9 +23,9 @@ Helper scripts to run **Microsoft SQL Server** in Docker and execute assignment 
    | File | Purpose |
    |------|--------|
    | `IceCreamFactory_Setup.sql` | Creates `FrostyDelightsDB` and seed data (run **before** trigger tests). |
-   | Your trigger / submission script | e.g. `FrostyDelights_Trigger_Submission.sql` or `FrostyDelights_Trigger.sql` |
+   | *Your* trigger / submission SQL | **Any filename you use** — pass that exact name to `run` / `all` (see below). |
 
-   If this folder only contains `FrostyDelights_Trigger.sql`, copy `IceCreamFactory_Setup.sql` (and any submission file you use) from your main assignment directory into `CSC645_assignment_Aaditya/` **or** change the paths in the commands below.
+   If `IceCreamFactory_Setup.sql` is missing, copy it from your course materials into this project root. Your trigger file can be named however your instructor or you prefer; what matters is that the path you pass to the script matches the file on disk.
 
 ## Scripts
 
@@ -50,52 +50,57 @@ chmod +x scripts/docker_sql.sh
 | `./scripts/docker_sql.sh all <file.sql>` | Pull + start + `IceCreamFactory_Setup.sql` + run `<file.sql>`. |
 | `./scripts/docker_sql.sh down` | Removes the `frosty-sqlserver` container. |
 
-**Examples:**
+**Examples** (replace `<YOUR_TRIGGER_SQL>` with your actual filename, e.g. `MyTrigger.sql`):
 
 ```bash
-# Full flow: setup DB, then run your submission (adjust filename if yours is FrostyDelights_Trigger.sql)
-./scripts/docker_sql.sh all FrostyDelights_Trigger_Submission.sql
+# Full flow: setup DB, then run your trigger + tests
+./scripts/docker_sql.sh all <YOUR_TRIGGER_SQL>
 ```
 
 ```bash
 # Or step by step
 ./scripts/docker_sql.sh setup
-./scripts/docker_sql.sh run FrostyDelights_Trigger.sql
+./scripts/docker_sql.sh run <YOUR_TRIGGER_SQL>
 ```
 
 Paths are **relative to the project root**, not the `scripts/` folder:
 
 ```bash
-./scripts/docker_sql.sh run FrostyDelights_Trigger.sql
+./scripts/docker_sql.sh run subfolder/assignment.sql   # if you put SQL in a subfolder
 ```
 
 ### `run_trigger_submission.sh`
 
-One-liner that calls:
+This helper runs `docker_sql.sh all` with **one** SQL file.
 
-```bash
-./scripts/docker_sql.sh all FrostyDelights_Trigger_Submission.sql
-```
+1. **Edit** `scripts/run_trigger_submission.sh` and set the default `TRIGGER_SQL_FILE` to **your** filename (relative to project root), **or**
+2. Pass it when you run (no edit needed):
 
-If your file is named `FrostyDelights_Trigger.sql`, either rename/copy it to match or edit this script to the correct filename.
+   ```bash
+   TRIGGER_SQL_FILE=YourFile.sql ./scripts/run_trigger_submission.sh
+   ```
+
+Then:
 
 ```bash
 chmod +x scripts/run_trigger_submission.sh
 ./scripts/run_trigger_submission.sh
 ```
 
+Alternatively, skip this helper and call `docker_sql.sh all <YOUR_TRIGGER_SQL>` directly.
+
 ## Troubleshooting
 
 ### `Invalid filename` for `/workspace/...sql`
 
-The container mounts the **project root** to `/workspace`. The file must exist **next to** `scripts/`, not only inside `scripts/`. If you use a manually created container **without** that volume mount, either:
+The container mounts the **project root** to `/workspace`. The file must exist **next to** `scripts/` (or under a path you pass), not only inside `scripts/`. If you use a manually created container **without** that volume mount, either:
 
 - Recreate the container with `-v /path/to/CSC645_assignment_Aaditya:/workspace`, or  
 - `docker cp` your `.sql` files into the container and use `-i /tmp/yourfile.sql`.
 
 ### `Database 'FrostyDelightsDB' does not exist`
 
-Run **`setup`** or **`all`** so `IceCreamFactory_Setup.sql` runs **before** the trigger script. Do not run only `run` on an empty server.
+Run **`setup`** or **`all`** so `IceCreamFactory_Setup.sql` runs **before** your trigger script. Do not run only `run` on an empty server.
 
 ### Apple Silicon (`arm64`) vs SQL Server image (`amd64`)
 
@@ -103,11 +108,11 @@ Docker may warn that the image platform is `linux/amd64`. That is normal; SQL Se
 
 ### Manual `sqlcmd` (no scripts)
 
-Replace `YOUR_CONTAINER` and the password:
+Replace `YOUR_CONTAINER`, `YOUR_PASSWORD`, and `<YOUR_TRIGGER_SQL>`:
 
 ```bash
 docker exec -it YOUR_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'YOUR_PASSWORD' -i /workspace/IceCreamFactory_Setup.sql
-docker exec -it YOUR_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'YOUR_PASSWORD' -i /workspace/FrostyDelights_Trigger.sql
+docker exec -it YOUR_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P 'YOUR_PASSWORD' -i /workspace/<YOUR_TRIGGER_SQL>
 ```
 
 ## File layout (expected)
@@ -116,9 +121,9 @@ docker exec -it YOUR_CONTAINER /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U 
 CSC645_assignment_Aaditya/
   .env                          # MSSQL_SA_PASSWORD=...
   IceCreamFactory_Setup.sql     # copy from course materials if missing
-  FrostyDelights_Trigger.sql    # your trigger + tests (or submission filename)
+  <YOUR_TRIGGER_SQL>            # your trigger + tests — name is up to you
   scripts/
-    README.md                   # this file
+    README.md                   # copy of this doc (optional)
     docker_sql.sh
-    run_trigger_submission.sh
+    run_trigger_submission.sh   # set TRIGGER_SQL_FILE or pass env var
 ```
